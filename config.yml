@@ -13,7 +13,7 @@ tiktok:
 
 style:
   font: "Arial-Bold"
-  title_size: 60
+  title_size: 400
   body_size: 45
   text_color: "white"
   bg_opacity: 0.6
