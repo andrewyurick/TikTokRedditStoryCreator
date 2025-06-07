@@ -1,0 +1,21 @@
+subreddits:
+  - funny
+  - todayilearned
+  - memes
+
+max_posts_per_run: 3
+min_upvotes: 500
+
+video_source: "gameplay.mp4"
+
+tiktok:
+  resolution: [1080, 1920]
+  frame_rate: 30
+  max_duration: 60
+
+style:
+  font: "Arial-Bold"
+  title_size: 60
+  body_size: 45
+  text_color: "white"
+  bg_opacity: 0.6
