@@ -1,7 +1,7 @@
 subreddits:
-  - funny
-  - todayilearned
-  - memes
+  - stories
+  - tifu
+  - AmItheAsshole
 
 max_posts_per_run: 3
 min_upvotes: 500
