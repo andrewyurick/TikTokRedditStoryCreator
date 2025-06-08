@@ -158,22 +158,3 @@ def create_story_card(
     # Save PNG
     base.save(output_path)
     return base
-
-if __name__ == "__main__":
-    # Example call: adjust paths and parameters as needed
-    card = create_story_card(
-        username="redditstories_doggo",
-        title="I am refusing to go to my brother's wedding because he won't tell me the reason his fiancé didn't invite me…",
-        avatar_path="images/reddit_avatr.png",
-        is_verified=True,
-        verified_icon_path="icon_verified_blue.png",
-        reward_paths=["images/reddit_gold.png", "images/reddit_platinum.png"],
-        heart_icon_path="images/heart-icon.png",
-        comment_icon_path="images/comment-icon.png",
-        like_count="99+",
-        comment_count="99+",
-        font_path="images/Roboto-Regular.ttf",
-        output_path="story_card_full.png"
-    )
-    # Display the generated image
-    card.show()
