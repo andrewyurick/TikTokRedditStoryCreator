@@ -158,12 +158,14 @@ def main():
         text = post.title + ("\n\n" + post.selftext if post.selftext else "")
         mp3_path = os.path.join(AUDIO_CACHE, f"{post.subreddit.display_name}_{post.id}.mp3")
         synthesize_speech(text, mp3_path)
-        narration = AudioFileClip(mp3_path)
+        # bump the AI narration up by ~20%
+        narration = AudioFileClip(mp3_path).volumex(1.2)
+
         # Prepare gameplay and audio
         gameplay = pick_gameplay_clip(narration.duration)
         gameplay = gameplay.resize(tuple(cfg['tiktok']['resolution']))
         music_list = [os.path.join(MUSIC_FOLDER, f) for f in os.listdir(MUSIC_FOLDER) if f.lower().endswith(('.mp4','.mp3'))]
-        bg_audio = AudioFileClip(random.choice(music_list)).audio_loop(duration=narration.duration).volumex(0.3)
+        bg_audio = AudioFileClip(random.choice(music_list)).audio_loop(duration=narration.duration).volumex(0.15)
         combined_audio = CompositeAudioClip([bg_audio, narration])
         # Create overlay clip
         card_clip = ImageClip(card_path)
