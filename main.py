@@ -141,9 +141,9 @@ def main():
         # Generate story card overlay
         card_path = os.path.join(AUDIO_CACHE, f"{post.id}_card.png")
         create_story_card(
-             username="redditstories_doggo",
+            username="reddit_post_finder",
             title=post.title,
-           avatar_path="images/reddit_avatr.png",
+            avatar_path="images/reddit_avatr.png",
             is_verified=True,
             verified_icon_path="icon_verified_blue.png",
             reward_paths=["images/reddit_gold.png", "images/reddit_platinum.png"],
@@ -163,13 +163,38 @@ def main():
 
         # Prepare gameplay and audio
         gameplay = pick_gameplay_clip(narration.duration)
-        gameplay = gameplay.resize(tuple(cfg['tiktok']['resolution']))
+        # gameplay = gameplay.resize(tuple(cfg['tiktok']['resolution']))
+        
+         # 2) Center-crop to 9:16, preserving as much content as possible:
+        from moviepy.video.fx.all import crop
+        w, h     = gameplay.size
+        Tw, Th   = cfg['tiktok']['resolution']  # (1080, 1920)
+        # If clip is too wide, crop horizontally:
+        if (w / h) > (Tw / Th):
+            new_w = int(h * Tw / Th)
+            x1 = (w - new_w) // 2
+            x2 = x1 + new_w
+            gameplay = crop(gameplay, x1=x1, x2=x2)
+        else:
+        # Otherwise crop vertically:
+            new_h = int(w * Th / Tw)
+            y1 = (h - new_h) // 2
+            y2 = y1 + new_h
+            gameplay = crop(gameplay, y1=y1, y2=y2)
+
+        # 3) Finally resize your crop to exactly TikTok size:
+        gameplay = gameplay.resize((Tw, Th))
+
         music_list = [os.path.join(MUSIC_FOLDER, f) for f in os.listdir(MUSIC_FOLDER) if f.lower().endswith(('.mp4','.mp3'))]
-        bg_audio = AudioFileClip(random.choice(music_list)).audio_loop(duration=narration.duration).volumex(0.15)
+        bg_audio = AudioFileClip(random.choice(music_list)).audio_loop(duration=narration.duration).volumex(0.10)
         combined_audio = CompositeAudioClip([bg_audio, narration])
         # Create overlay clip
         card_clip = ImageClip(card_path)
-        vid_w, vid_h = cfg['tiktok']['resolution']
+        
+        #vid_w, vid_h = cfg['tiktok']['resolution']
+
+        vid_w, vid_h = gameplay.size
+
         card_clip = card_clip.set_duration(CARD_DURATION)
         # scale to 75% of video size
         card_clip = card_clip.resize(height=int(vid_h * CARD_SCALE))
