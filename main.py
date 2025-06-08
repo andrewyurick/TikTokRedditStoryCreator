@@ -3,7 +3,7 @@
 main.py
 
 Generate TikTok videos by overlaying top Reddit submissions over gameplay footage
-with lofi music and AI narration (cached). Captioning removed.
+with lofi music and AI narration (cached). Displays a story card overlay for the first 5 seconds.
 """
 import os
 import random
@@ -19,14 +19,24 @@ if not hasattr(Image, 'ANTIALIAS'):
     except Exception:
         Image.ANTIALIAS = getattr(Image, 'LANCZOS', 1)
 
-from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, concatenate_videoclips
+from moviepy.editor import (
+    VideoFileClip,
+    AudioFileClip,
+    CompositeAudioClip,
+    concatenate_videoclips,
+    ImageClip,
+    CompositeVideoClip
+)
+from story_card import create_story_card
 
-# Configuration constants
+# Configuration
 VIDEOS_FOLDER = 'videos'
 MUSIC_FOLDER = 'music'
 AUDIO_CACHE = 'audio_cache'
 OUTPUT_FOLDER = 'output'
 MAX_TOTAL_DURATION = 180  # seconds
+CARD_DURATION = 5         # seconds overlay duration
+CARD_SCALE = 0.75         # scale relative to video resolution
 
 # Load YAML config
 def load_config(path='config.yml') -> dict:
@@ -115,7 +125,7 @@ def split_and_write_clips(clips, max_duration: float, out_dir: str, fps: int):
         final.write_videofile(out_path, fps=fps, codec='libx264', audio_codec='aac')
 
 # Main execution
-if __name__ == '__main__':
+def main():
     cfg = load_config()
     reddit = praw.Reddit(
         client_id=os.getenv('REDDIT_CLIENT_ID'),
@@ -126,17 +136,47 @@ if __name__ == '__main__':
     )
     posts = get_reddit_posts(reddit, cfg['subreddits'], cfg['max_posts_per_run'], cfg['min_upvotes'])
     os.makedirs(AUDIO_CACHE, exist_ok=True)
-    assembled = []
+    final_clips = []
     for post in posts:
-        content = post.title + ("\n\n" + post.selftext if post.selftext else "")
+        # Generate story card overlay
+        card_path = os.path.join(AUDIO_CACHE, f"{post.id}_card.png")
+        create_story_card(
+             username="redditstories_doggo",
+            title=post.title,
+           avatar_path="images/reddit_avatr.png",
+            is_verified=True,
+            verified_icon_path="icon_verified_blue.png",
+            reward_paths=["images/reddit_gold.png", "images/reddit_platinum.png"],
+            heart_icon_path="images/heart-icon.png",
+            comment_icon_path="images/comment-icon.png",
+            like_count="99+",
+            comment_count="99+",
+            font_path="images/Roboto-Regular.ttf",
+            output_path=card_path
+        )
+        # Synthesize narration
+        text = post.title + ("\n\n" + post.selftext if post.selftext else "")
         mp3_path = os.path.join(AUDIO_CACHE, f"{post.subreddit.display_name}_{post.id}.mp3")
-        synthesize_speech(content, mp3_path)
+        synthesize_speech(text, mp3_path)
         narration = AudioFileClip(mp3_path)
+        # Prepare gameplay and audio
         gameplay = pick_gameplay_clip(narration.duration)
         gameplay = gameplay.resize(tuple(cfg['tiktok']['resolution']))
         music_list = [os.path.join(MUSIC_FOLDER, f) for f in os.listdir(MUSIC_FOLDER) if f.lower().endswith(('.mp4','.mp3'))]
         bg_audio = AudioFileClip(random.choice(music_list)).audio_loop(duration=narration.duration).volumex(0.3)
-        final_audio = CompositeAudioClip([bg_audio, narration])
-        clip = gameplay.set_audio(final_audio)
-        assembled.append(clip)
-    split_and_write_clips(assembled, MAX_TOTAL_DURATION, OUTPUT_FOLDER, cfg['tiktok']['frame_rate'])
+        combined_audio = CompositeAudioClip([bg_audio, narration])
+        # Create overlay clip
+        card_clip = ImageClip(card_path)
+        vid_w, vid_h = cfg['tiktok']['resolution']
+        card_clip = card_clip.set_duration(CARD_DURATION)
+        # scale to 75% of video size
+        card_clip = card_clip.resize(height=int(vid_h * CARD_SCALE))
+        card_clip = card_clip.set_position(('center','center'))
+        # Composite gameplay under card overlay
+        comp = CompositeVideoClip([gameplay.set_audio(combined_audio), card_clip], size=(vid_w, vid_h))
+        final_clips.append(comp)
+    # Split and write
+    split_and_write_clips(final_clips, MAX_TOTAL_DURATION, OUTPUT_FOLDER, cfg['tiktok']['frame_rate'])
+
+if __name__ == '__main__':
+    main()
