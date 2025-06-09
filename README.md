@@ -16,3 +16,6 @@ Generate using yt-dlp for exampole:
     yt-dlp -f "bestvideo[height=1080][fps=60]+bestaudio" --merge-output-format mp4 -o "C:\Users\comic\Downloads\subwaySurfer" https://www.youtube.com/watch?v=UCyKyyLzpD4
 
 # Add lofi music mp4 or mp3 files to music folder
+
+# Example video produced
+https://www.tiktok.com/@reddit_post_finder/video/7513729904249146666?is_from_webapp=1&sender_device=pc&web_id=7513237859244361246
