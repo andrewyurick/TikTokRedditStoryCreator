@@ -1,10 +1,9 @@
 subreddits:
-  - stories
   - tifu
   - AmItheAsshole
 
 max_posts_per_run: 3
-min_upvotes: 1000
+min_upvotes: 5000
 
 tiktok:
   resolution: [1080, 1920]

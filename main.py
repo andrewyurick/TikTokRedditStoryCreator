@@ -37,6 +37,7 @@ OUTPUT_FOLDER = 'output'
 MAX_TOTAL_DURATION = 180  # seconds
 CARD_DURATION = 5         # seconds overlay duration
 CARD_SCALE = 0.75         # scale relative to video resolution
+PROCESSED_FILE = 'processed_posts.txt'
 
 # Load YAML config
 def load_config(path='config.yml') -> dict:
@@ -44,12 +45,14 @@ def load_config(path='config.yml') -> dict:
     with open(path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
-# Fetch top submissions only (no comments)
-def get_reddit_posts(reddit, subs, max_posts, min_upvotes):
+# Updated get_reddit_posts to take processed_ids
+def get_reddit_posts(reddit, subs, max_posts, min_upvotes, processed_ids):
     posts = []
     for sub in subs:
         for submission in reddit.subreddit(sub).top('week', limit=max_posts * 3):
-            if submission.score >= min_upvotes and not submission.stickied:
+            if submission.score >= min_upvotes \
+               and not submission.stickied \
+               and submission.id not in processed_ids:
                 posts.append(submission)
                 if len(posts) >= max_posts:
                     return posts
@@ -124,6 +127,16 @@ def split_and_write_clips(clips, max_duration: float, out_dir: str, fps: int):
         out_path = os.path.join(out_dir, f'part{idx}.mp4')
         final.write_videofile(out_path, fps=fps, codec='libx264', audio_codec='aac')
 
+def load_processed_posts():
+    if not os.path.exists(PROCESSED_FILE):
+        return set()
+    with open(PROCESSED_FILE, 'r', encoding='utf-8') as f:
+        return set(line.strip() for line in f if line.strip())
+
+def save_processed_post(post_id):
+    with open(PROCESSED_FILE, 'a', encoding='utf-8') as f:
+        f.write(post_id + '\n')
+
 # Main execution
 def main():
     cfg = load_config()
@@ -134,7 +147,8 @@ def main():
         password=os.getenv('REDDIT_PASSWORD'),
         user_agent='TikTokVideoGen/1.0'
     )
-    posts = get_reddit_posts(reddit, cfg['subreddits'], cfg['max_posts_per_run'], cfg['min_upvotes'])
+    processed = load_processed_posts()
+    posts = get_reddit_posts(reddit, cfg['subreddits'], cfg['max_posts_per_run'], cfg['min_upvotes'], processed)
     os.makedirs(AUDIO_CACHE, exist_ok=True)
     final_clips = []
     for post in posts:
@@ -190,9 +204,6 @@ def main():
         combined_audio = CompositeAudioClip([bg_audio, narration])
         # Create overlay clip
         card_clip = ImageClip(card_path)
-        
-        #vid_w, vid_h = cfg['tiktok']['resolution']
-
         vid_w, vid_h = gameplay.size
 
         card_clip = card_clip.set_duration(CARD_DURATION)
@@ -202,6 +213,7 @@ def main():
         # Composite gameplay under card overlay
         comp = CompositeVideoClip([gameplay.set_audio(combined_audio), card_clip], size=(vid_w, vid_h))
         final_clips.append(comp)
+        save_processed_post(post.id)
     # Split and write
     split_and_write_clips(final_clips, MAX_TOTAL_DURATION, OUTPUT_FOLDER, cfg['tiktok']['frame_rate'])
 
