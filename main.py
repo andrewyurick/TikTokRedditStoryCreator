@@ -93,6 +93,7 @@ def synthesize_speech(text: str, out_path: str):
             temp_paths.append(part)
         audio_clips = [AudioFileClip(p) for p in temp_paths]
         combined = CompositeAudioClip(audio_clips)
+        combined.fps = audio_clips[0].fps
         combined.write_audiofile(out_path)
         for p in temp_paths:
             os.remove(p)
